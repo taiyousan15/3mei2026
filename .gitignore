@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# Cache
+.cache/
+.eslintcache
+
+# Memory backups (large files)
+.claude/memory-backup/archive/*.tar.gz
+
+# Credentials
+credentials.json
+**/secrets/
+*.pem
+*.key
+
+# Temporary files
+tmp/
+temp/
+*.tmp

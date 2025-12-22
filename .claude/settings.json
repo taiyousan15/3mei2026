@@ -1,0 +1,24 @@
+{
+  "alwaysThinkingEnabled": true,
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "Task(*)",
+      "WebFetch(*)",
+      "WebSearch(*)"
+    ],
+    "deny": []
+  },
+  "preferredModel": "sonnet",
+  "maxParallelAgents": 5,
+  "qualityGates": {
+    "codeReviewMinScore": 80,
+    "testCoverageMin": 80,
+    "securityScanRequired": true
+  }
+}
