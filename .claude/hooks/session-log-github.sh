@@ -1,42 +1,51 @@
 #!/bin/bash
 # session-log-github.sh - セッション終了時にGitHub Issueへ自動ログ
-#
-# 使用方法: settings.json または settings.local.json に追加
-# {
-#   "hooks": {
-#     "Stop": [{ "command": ".claude/hooks/session-log-github.sh" }]
-#   }
-# }
 
 set -e
 
 REPO="taiyousan15/3mei2026"
-ISSUE_NUMBER="1"
+SESSION_FILE=".claude/.current-session"
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M")
 
-# 最新のgitログを取得（直近のコミット）
+# セッションIssue番号を取得
+if [ ! -f "$SESSION_FILE" ]; then
+  echo "No active session found"
+  exit 0
+fi
+
+ISSUE_NUMBER=$(cat "$SESSION_FILE")
+if [ -z "$ISSUE_NUMBER" ]; then
+  echo "No session Issue number"
+  exit 0
+fi
+
+# 最新のgitログを取得
 RECENT_COMMITS=$(git log --oneline -5 2>/dev/null || echo "No commits")
 
 # 変更ファイルを取得
-CHANGED_FILES=$(git diff --name-only HEAD~1 2>/dev/null | head -10 || echo "No changes")
+CHANGED_FILES=$(git status --short 2>/dev/null | head -15 || echo "No changes")
 
 # GitHub Issueにコメント追加
 gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "$(cat <<EOF
-## セッション終了ログ - $TIMESTAMP
+## セッション終了: $TIMESTAMP
 
 ### 直近のコミット
 \`\`\`
 $RECENT_COMMITS
 \`\`\`
 
-### 変更ファイル
+### ファイル状態
 \`\`\`
 $CHANGED_FILES
 \`\`\`
 
 ---
-🤖 Auto-logged by Claude Code (session end)
+🤖 Auto-logged (session end)
 EOF
-)" 2>/dev/null || echo "Failed to post to GitHub Issue"
+)" 2>/dev/null && echo "Logged to Issue #$ISSUE_NUMBER"
 
-echo "Session logged to GitHub Issue #$ISSUE_NUMBER"
+# Issueをクローズ
+gh issue close "$ISSUE_NUMBER" --repo "$REPO" --comment "セッション終了 - $TIMESTAMP" 2>/dev/null || true
+
+# セッションファイルをクリア
+rm -f "$SESSION_FILE"
