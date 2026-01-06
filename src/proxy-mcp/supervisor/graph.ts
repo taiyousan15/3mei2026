@@ -22,12 +22,16 @@ import {
   checkApproval,
   addIssueComment,
   closeIssue,
+  isGhAvailable,
+  getDefaultRepo,
 } from './github';
 import { route as routeToMcp } from '../router';
 import { getAllMcps, getRouterConfig } from '../internal/registry';
 import { memoryAdd, memorySearch } from '../tools/memory';
 import { MemoryNamespace } from '../memory/types';
 import { recordEvent, startTimer } from '../observability';
+import { t } from '../../i18n';
+import { checkIssuePostingReadiness } from '../../utils/env-check';
 
 /**
  * Generate unique run ID
@@ -387,6 +391,33 @@ export async function runSupervisor(
   let state = createInitialState(input, options);
   const maxSteps = options.maxSteps || 10;
   let stepCount = 0;
+
+  // Check Issue posting readiness (require_human if not ready)
+  const issuePostingCheck = checkIssuePostingReadiness();
+  if (issuePostingCheck.status === 'error') {
+    // GitHub authentication required - stop with helpful message
+    const errorMessage = t('require_human.github_auth');
+    console.error('\n' + errorMessage);
+
+    recordEvent('supervisor_step', state.runId, 'fail', {
+      errorType: 'github_auth_required',
+      errorMessage: 'Issue posting not ready - require_human',
+    });
+
+    return {
+      success: false,
+      runId: state.runId,
+      step: 'error',
+      requiresApproval: true,
+      error: errorMessage,
+      data: {
+        requireHuman: true,
+        reason: 'github_auth_required',
+        diagnosis: issuePostingCheck.message,
+        advice: issuePostingCheck.advice,
+      },
+    };
+  }
 
   // Record start event
   recordEvent('supervisor_step', state.runId, 'ok', {

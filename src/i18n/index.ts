@@ -209,6 +209,65 @@ gh auth login
 
 詳細: docs/getting-started-ja.md#前提条件
 `,
+
+  'env.missing.logging_config': `⚠️ logging.json が見つかりません
+
+Issue ログ機能を使用するには、設定ファイルが必要です。
+
+### 作成手順
+config/proxy-mcp/logging.json を作成してください:
+{
+  "issueLogEnabled": true,
+  "issueLogLocale": "ja"
+}
+
+詳細: docs/getting-started-ja.md#ロケール設定
+`,
+
+  'env.missing.repository': `⚠️ リポジトリを特定できません
+
+Issue を作成するには、GitHub リポジトリが必要です。
+
+### 解決方法
+1. 環境変数で設定: REPOSITORY=owner/repo
+2. または、git remote が設定されていることを確認してください:
+   git remote add origin https://github.com/owner/repo.git
+
+詳細: docs/getting-started-ja.md#github認証
+`,
+
+  'env.issue_posting.not_ready': `⚠️ Issue 投稿の準備ができていません
+
+Issue にログを残すには、以下が必要です:
+1. GITHUB_TOKEN が設定されていること
+2. gh CLI がインストール・ログインされていること
+3. リポジトリが特定できること
+
+### 診断コマンド
+npm run doctor
+
+### 詳細
+docs/getting-started-ja.md を参照してください。
+`,
+
+  // require_human messages
+  'require_human.github_auth': `🛑 GitHub 認証が必要です
+
+Issue にログを残せないため、処理を停止します。
+
+### 必要な手順
+1. GITHUB_TOKEN を設定してください:
+   export GITHUB_TOKEN=ghp_xxxxxxxxxxxxx
+
+2. gh CLI をインストール・ログインしてください:
+   brew install gh
+   gh auth login
+
+3. 環境を確認してください:
+   npm run doctor
+
+詳細: docs/getting-started-ja.md#github認証
+`,
 };
 
 /**
@@ -366,6 +425,65 @@ Required version: {required} or higher
 - Direct: Download from https://nodejs.org/
 
 Details: docs/getting-started-ja.md#prerequisites
+`,
+
+  'env.missing.logging_config': `⚠️ logging.json not found
+
+A configuration file is required to use Issue logging.
+
+### Setup
+Create config/proxy-mcp/logging.json:
+{
+  "issueLogEnabled": true,
+  "issueLogLocale": "en"
+}
+
+Details: docs/getting-started-ja.md#locale-settings
+`,
+
+  'env.missing.repository': `⚠️ Could not identify repository
+
+A GitHub repository is required to create Issues.
+
+### Solutions
+1. Set environment variable: REPOSITORY=owner/repo
+2. Or ensure git remote is configured:
+   git remote add origin https://github.com/owner/repo.git
+
+Details: docs/getting-started-ja.md#github-authentication
+`,
+
+  'env.issue_posting.not_ready': `⚠️ Issue posting is not ready
+
+The following are required to post logs to Issues:
+1. GITHUB_TOKEN must be set
+2. gh CLI must be installed and logged in
+3. Repository must be identifiable
+
+### Diagnostic command
+npm run doctor
+
+### Details
+See docs/getting-started-ja.md for more information.
+`,
+
+  // require_human messages
+  'require_human.github_auth': `🛑 GitHub authentication required
+
+Processing stopped because logs cannot be posted to Issues.
+
+### Required steps
+1. Set GITHUB_TOKEN:
+   export GITHUB_TOKEN=ghp_xxxxxxxxxxxxx
+
+2. Install and login to gh CLI:
+   brew install gh
+   gh auth login
+
+3. Verify your environment:
+   npm run doctor
+
+Details: docs/getting-started-ja.md#github-authentication
 `,
 };
 

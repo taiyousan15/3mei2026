@@ -6,6 +6,16 @@
     "web:dev": "pnpm --dir apps/web dev",
     "web:build": "pnpm --dir apps/web build",
     "web:lint": "pnpm --dir apps/web lint",
-    "web:typecheck": "pnpm --dir apps/web typecheck || true"
+    "web:typecheck": "pnpm --dir apps/web typecheck || true",
+    "build": "tsc -p tsconfig.proxy.json",
+    "doctor": "node -r ts-node/register src/utils/env-check.ts",
+    "doctor:verbose": "DEBUG=* node -r ts-node/register src/utils/env-check.ts",
+    "proxy:dev": "ts-node src/proxy-mcp/server.ts",
+    "proxy:start": "node dist/proxy-mcp/server.js",
+    "runlog:close": "node -r ts-node/register scripts/runlog-close.ts",
+    "test": "jest",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest tests/integration",
+    "lint": "eslint src --ext .ts,.tsx"
   }
 }

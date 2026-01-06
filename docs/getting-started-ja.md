@@ -6,10 +6,12 @@
 
 - [前提条件](#前提条件)
 - [インストール](#インストール)
+- [環境診断 (npm run doctor)](#環境診断-npm-run-doctor)
 - [GitHub認証](#github認証)
 - [GitHub CLI導入](#github-cli導入)
 - [基本的な使い方](#基本的な使い方)
 - [ロケール設定](#ロケール設定)
+- [Issueログの自動投稿](#issueログの自動投稿)
 - [トラブルシューティング](#トラブルシューティング)
 
 ## 前提条件
@@ -68,6 +70,83 @@ TAISUN_LOCALE=ja
 ```bash
 npm run build
 ```
+
+## 環境診断 (npm run doctor)
+
+TAISUN Agentは環境診断ツールを提供しています。セットアップ後、以下のコマンドで環境が正しく構成されているか確認してください。
+
+### 診断の実行
+
+```bash
+npm run doctor
+```
+
+### 出力例（正常時）
+
+```
+=== Environment Check ===
+
+✅ Node.js: Node.js 20.10.0 is installed
+✅ Git: Git is configured
+✅ .env File: .env file exists
+✅ GITHUB_TOKEN: GITHUB_TOKEN is configured
+✅ GitHub CLI: GitHub CLI is installed and logged in
+✅ Repository: Repository detected from git: owner/repo
+✅ Config Files: All required config files exist
+✅ Issue Log Config: Issue logging enabled (locale: ja)
+✅ Issue Posting: Issue posting is ready
+
+--- Summary ---
+✅ All critical checks passed
+```
+
+### 出力例（問題がある場合）
+
+```
+=== Environment Check ===
+
+✅ Node.js: Node.js 20.10.0 is installed
+✅ Git: Git is configured
+⚠️ .env File: .env file not found
+
+Copy .env.example to .env and fill in the values:
+  cp .env.example .env
+
+❌ GITHUB_TOKEN: GITHUB_TOKEN is not set
+
+⚠️ GITHUB_TOKEN が未設定です
+
+GitHubとの連携機能を使用するには、GITHUB_TOKENの設定が必要です。
+
+### 設定手順
+1. GitHub Settings → Developer settings → Personal access tokens
+2. "Generate new token (classic)" をクリック
+3. 必要なスコープを選択: repo, workflow
+4. トークンを生成してコピー
+5. .env ファイルに追加: GITHUB_TOKEN=your_token_here
+
+詳細: docs/getting-started-ja.md#github認証
+
+--- Summary ---
+❌ 1 critical issue(s) found
+⚠️ 1 warning(s)
+```
+
+### チェック項目
+
+| 項目 | 必須 | 説明 |
+|-----|-----|-----|
+| Node.js | ✅ | Node.js 18.0.0以上がインストールされているか |
+| Git | ✅ | Gitが設定されているか |
+| .env File | ⚠️ | .envファイルが存在するか |
+| GITHUB_TOKEN | ✅ | GitHub Personal Access Tokenが設定されているか |
+| GitHub CLI | ⚠️ | gh CLIがインストール・ログインされているか |
+| Repository | ✅ | GitHubリポジトリが特定できるか |
+| Config Files | ⚠️ | 必要な設定ファイルが存在するか |
+| Issue Log Config | ⚠️ | Issueログの設定が有効か |
+| Issue Posting | ✅ | Issue投稿の準備ができているか |
+
+**重要**: Issue投稿に関する項目が❌の場合、Supervisorは処理を開始せず、設定方法を案内して停止します。これはログが残せない状態での実行を防ぐための安全機能です。
 
 ## GitHub認証
 
@@ -218,6 +297,83 @@ TAISUN_LOCALE=en  # 英語
 | `ja-JP` | 日本語 |
 | `en` | 英語 |
 | `en-US` | 英語 |
+
+## Issueログの自動投稿
+
+TAISUN Agentは、Supervisor実行時に自動でGitHub Issueにログを投稿します。
+
+### 自動投稿のタイミング
+
+| タイミング | 内容 |
+|-----------|------|
+| **開始時** | RUNLOG Issue を作成し、実行開始を記録 |
+| **計画作成時** | 実行計画とリスクレベルをコメント |
+| **承認要求時** | 承認が必要な操作の場合、承認用Issueを作成 |
+| **実行完了時** | 実行結果サマリをコメントし、Issueをクローズ |
+| **エラー発生時** | エラー内容をコメント |
+
+### 設定ファイル
+
+`config/proxy-mcp/logging.json` で詳細設定が可能です：
+
+```json
+{
+  "issueLogEnabled": true,
+  "issueLogLocale": "ja",
+  "repo": "",
+  "autoCreateIssues": true,
+  "defaultLabels": ["🤖agent-execute", "automated"],
+  "runlogTitleTemplate": "[RUNLOG] {taskTitle}",
+  "parentIssueTitleTemplate": "[{phase}] {taskTitle}",
+  "progressLogGranularity": "milestone",
+  "postOnStart": true,
+  "postOnProgress": true,
+  "postOnRequireHuman": true,
+  "postOnFinish": true,
+  "closeOnComplete": true
+}
+```
+
+### 設定項目の説明
+
+| 項目 | デフォルト | 説明 |
+|-----|----------|------|
+| `issueLogEnabled` | true | Issueログを有効にするか |
+| `issueLogLocale` | ja | ログの言語（ja/en） |
+| `repo` | 空 | リポジトリ（空の場合はgit remoteから自動検出） |
+| `autoCreateIssues` | true | Issueを自動作成するか |
+| `defaultLabels` | [] | 自動付与するラベル |
+| `progressLogGranularity` | milestone | ログの粒度（milestone/step） |
+| `closeOnComplete` | true | 完了時にIssueをクローズするか |
+
+### Issueにログが残らない時のチェックリスト
+
+1. **`npm run doctor` を実行**
+   - Issue Postingが✅になっているか確認
+
+2. **GITHUB_TOKEN を確認**
+   ```bash
+   echo $GITHUB_TOKEN
+   # 値が表示されるか確認
+   ```
+
+3. **gh CLI のログイン状態を確認**
+   ```bash
+   gh auth status
+   # "Logged in" と表示されるか確認
+   ```
+
+4. **リポジトリが特定できるか確認**
+   ```bash
+   git remote -v
+   # origin が設定されているか確認
+   ```
+
+5. **logging.json を確認**
+   ```bash
+   cat config/proxy-mcp/logging.json
+   # issueLogEnabled が true になっているか確認
+   ```
 
 ## トラブルシューティング
 
