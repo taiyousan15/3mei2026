@@ -9,6 +9,7 @@ pnpm-debug.log
 .env
 .env.local
 .env.*.local
+.env.ops
 
 # Python
 __pycache__/
@@ -28,3 +29,11 @@ ruff_cache/
 # Build artifacts
 *.log
 coverage/
+
+# TAISUN temp
+.taisun/
+logs/
+
+# Claude Code auto-generated
+**/CLAUDE.md
+!/.claude/CLAUDE.md
