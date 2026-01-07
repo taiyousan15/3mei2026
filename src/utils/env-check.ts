@@ -10,6 +10,24 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { t } from '../i18n';
 
+// Load .env file if exists
+const envPath = path.join(process.cwd(), '.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  for (const line of envContent.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      const [key, ...valueParts] = trimmed.split('=');
+      if (key && valueParts.length > 0) {
+        const value = valueParts.join('=').replace(/^["']|["']$/g, '');
+        if (!process.env[key]) {
+          process.env[key] = value;
+        }
+      }
+    }
+  }
+}
+
 export interface EnvCheckResult {
   name: string;
   status: 'ok' | 'warning' | 'error';
@@ -168,6 +186,128 @@ export function checkConfigFiles(): EnvCheckResult {
 }
 
 /**
+ * Check logging.json configuration for Issue posting
+ */
+export function checkLoggingConfig(): EnvCheckResult {
+  const configPath = path.join(process.cwd(), 'config', 'proxy-mcp', 'logging.json');
+
+  if (!fs.existsSync(configPath)) {
+    return {
+      name: 'Issue Log Config',
+      status: 'warning',
+      message: 'logging.json not found',
+      advice: t('env.missing.logging_config'),
+    };
+  }
+
+  try {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+
+    if (config.issueLogEnabled === false) {
+      return {
+        name: 'Issue Log Config',
+        status: 'warning',
+        message: 'Issue logging is disabled in config',
+        advice: 'Set "issueLogEnabled": true in config/proxy-mcp/logging.json to enable Issue logging.',
+      };
+    }
+
+    return {
+      name: 'Issue Log Config',
+      status: 'ok',
+      message: `Issue logging enabled (locale: ${config.issueLogLocale || 'ja'})`,
+    };
+  } catch (error) {
+    return {
+      name: 'Issue Log Config',
+      status: 'error',
+      message: 'Failed to parse logging.json',
+      advice: 'Check config/proxy-mcp/logging.json for JSON syntax errors.',
+    };
+  }
+}
+
+/**
+ * Check if repository can be identified
+ */
+export function checkRepository(): EnvCheckResult {
+  // Check environment variable first
+  const envRepo = process.env.REPOSITORY;
+  if (envRepo && envRepo.includes('/')) {
+    return {
+      name: 'Repository',
+      status: 'ok',
+      message: `Repository configured: ${envRepo}`,
+    };
+  }
+
+  // Try to get from git remote
+  try {
+    const remote = execSync('git remote get-url origin', { encoding: 'utf8', stdio: 'pipe' }).trim();
+    const match = remote.match(/github\.com[/:]([\w-]+\/[\w-]+)/);
+    if (match) {
+      const repo = match[1].replace(/\.git$/, '');
+      return {
+        name: 'Repository',
+        status: 'ok',
+        message: `Repository detected from git: ${repo}`,
+      };
+    }
+  } catch {
+    // Git command failed
+  }
+
+  return {
+    name: 'Repository',
+    status: 'error',
+    message: 'Could not determine repository',
+    advice: t('env.missing.repository'),
+  };
+}
+
+/**
+ * Comprehensive Issue posting readiness check
+ */
+export function checkIssuePostingReadiness(): EnvCheckResult {
+  const issues: string[] = [];
+
+  // Check GITHUB_TOKEN
+  const tokenResult = checkGitHubToken();
+  if (tokenResult.status === 'error') {
+    issues.push('GITHUB_TOKEN not set');
+  }
+
+  // Check gh CLI
+  const ghResult = checkGhCli();
+  if (ghResult.status === 'error') {
+    issues.push('gh CLI not available');
+  } else if (ghResult.status === 'warning' && ghResult.message.includes('not logged in')) {
+    issues.push('gh CLI not logged in');
+  }
+
+  // Check repository
+  const repoResult = checkRepository();
+  if (repoResult.status === 'error') {
+    issues.push('Repository not identified');
+  }
+
+  if (issues.length > 0) {
+    return {
+      name: 'Issue Posting',
+      status: 'error',
+      message: `Issue posting not ready: ${issues.join(', ')}`,
+      advice: t('env.issue_posting.not_ready'),
+    };
+  }
+
+  return {
+    name: 'Issue Posting',
+    status: 'ok',
+    message: 'Issue posting is ready',
+  };
+}
+
+/**
  * Check if .env file exists
  */
 export function checkEnvFile(): EnvCheckResult {
@@ -240,7 +380,10 @@ export function runEnvChecks(): EnvCheckSummary {
     checkEnvFile(),
     checkGitHubToken(),
     checkGhCli(),
+    checkRepository(),
     checkConfigFiles(),
+    checkLoggingConfig(),
+    checkIssuePostingReadiness(),
   ];
 
   const critical = results.filter((r) => r.status === 'error').length;
